@@ -1,0 +1,10 @@
+======问题汇总======
+====解决parse.y  error: conflicting types for '__errno'====
+没有找到解决的办法,我把''externl/bash''目录去掉可以编译。
+====解决more undefined references to `__android_log_print' ALOGE问题：====
+<code make>
+-LOCAL_STATIC_LIBRARIES += libstdc++ libc libcutils
++LOCAL_STATIC_LIBRARIES += libstdc++ libc libcutils liblog
+</code>
+==== undefined reference to `cleanse_ctr' ====
+在编译''external/openssl/''的时候，在''external/openssl/crypto/mem.c''中，其实这个变量是在''external/openssl/crypto/mem_ctr.c''中定义，在''external/openssl/Crypto-config.mk''中罗列文件是mem.c出现在mem_ctr.c之前，换一下位置就可以了。

@@ -1,0 +1,24 @@
+======NC  (nook color)刷机方法======
+=====制作一张刷机卡=====
+  -下载CWM文件和烧写工具win32diskimager，所文件都可以到[[http://yunpan.cn/QUJTu5Edf7ruu|这里]]下载
+  -解压win32烧写工具
+  -解压cwm((下1gb_clockwork-0.7.tar就可以了))得到img文件
+  -插入TF卡((卡上的内容都会被格式化掉))
+  -用烧写工具win32disk把img文件烧写到卡上
+  -下载ROM文件<sub>zip</sub>,拷贝到卡上
+  -从PC上取出TF卡
+=====烧写ROM文件=====
+  -保证NC至少20％的电量
+  -关闭NC
+  -把TF卡插入NC
+  -按电源键打开NC
+  -等半分钟，进入recovery模式
+  -进入mounts and storage
+  -执行format system， format cache<sub>双清</sub>
+  -按电源键返回上一界面
+  -choose zip from sdcard
+  -选择刷机包，按n确认
+  -成功之后reboot system now,并取出TF卡
+如果等了很久还是没有启动，长按电源关闭之后再打开应该就好了。
+=====刷机感受=====
+刷上4.2之后速度比以前快多了，720P的动画片还是可以看的。分辨率的问题也解决了，以前用2.3的时候真想把它扔了。

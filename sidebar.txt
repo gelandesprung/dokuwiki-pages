@@ -1,0 +1,16 @@
+[[start|简介]] \\
+[[wiki:NC刷机|NC刷机]] \\
+[[playground:bbs|讨论组]] \\
+====文档====
+  *[[playground:makefile-syntax|Makefile语法]] \\
+  *[[yanchao:install-wordpress-to-3p|install wordpress on 3p]] \\
+  *[[yanchao:gitosis-config|安装配置gitosis]] \\
+[[wiki:nomal-command]] \\
+[[wiki:HomeServer|Home Server]] \\
+[[wiki:BookMarks|Book Marks]] \\
+====Android====
+  *[[android-HelloWorld|命令行创建android工程之HelloWorld]] 
+  *[[service|Service]] 
+  *[[SystemService|System Service]]
+====Unix环境编程====
+  -[[Introduction|系统介绍]]

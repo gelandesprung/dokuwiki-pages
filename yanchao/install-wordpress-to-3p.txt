@@ -1,0 +1,166 @@
+====== Install wordpress on palm pre plus ======
+Other attributes((http://www.webos-internals.org/wiki/Ad-Hoc_Networking))
+====mount the filesystem to be writable====
+Go SSH into your Palm Pre to the linux command prompt and type the following.  (Please press enter after any of these code lines of course…)
+<code bash>
+sudo mount -o remount,rw /
+</code>
+====install MySQL====
+ install optware MySQL package by typing the command below:
+<code bash>
+sudo ipkg-opt install mysql
+</code>
+You will get the following messages if installation is successful.
+<file>
+To start mysqld at boot time you have to copy support-files/mysql.server
+to the right place for your system
+
+PLEASE REMEMBER TO SET A PASSWORD FOR THE MySQL root USER !
+To do so, start the server, then issue the following commands:
+
+/opt/bin/mysqladmin -u root password 'new-password'
+/opt/bin/mysqladmin -u root -h castle password 'new-password'
+See the manual for more instructions.
+
+You can start the MySQL daemon with:
+cd /opt ; /opt/bin/mysqld_safe &
+
+You can test the MySQL daemon with the benchmarks in the 'sql-bench' directory:
+cd sql-bench ; perl run-all-tests
+
+Please report any problems with the /opt/bin/mysqlbug script!
+
+The latest information about MySQL is available on the web at
+
+http://www.mysql.com
+
+Support MySQL by buying support/licenses at http://shop.mysql.com
+Starting MySQL SUCCESS!
+Successfully terminated.
+</file>
+Let’s reset our MySQL root password by typing the following command where new-password should be your new password.  (Please make a note of your MySQL root password as we will need it later for WordPress configuration file.)
+<code bash>
+/opt/bin/mysqladmin -u root password 'new-password'
+</code>
+Next, let’s create a new database for the MySQL server so we can use it for the WordPress blog.
+<code bash>
+/opt/bin/mysql -u root
+
+mysql> create database test;
+
+mysql> quit;
+</code>
+5)Next, we will install Lighttpd, which is the light version of Apache.
+<code bash>
+sudo ipkg-opt install lighttpd php-fcgi
+</code>
+Your web root will be in the following directory:
+
+  /opt/share/www/
+
+Next, we will edit the Lighttpd port to 9999 to not interfere with other httpd processes on the Palm Pre:
+<code bash>
+sudo vi /opt/etc/lighttpd/lighttpd.conf
+</code>
+Change the server.port form 8081 to 9999 like here:
+
+(You will need to type “i” to start typing…refer to complete VI command instructions here or you can use your favorite linux editor too.)
+<code bash>
+## bind to port (default: 80)
+server.port                = 9999
+</code>
+Press the Esc key on your keyboard and “:wq!” to save file and exit back to command prompt.
+==== setup lighttpd & mysqld ====
+
+we will setup a start-up event so our lighttpd and mysqld server runs at boot time and when your phone is on:
+<code bash>
+sudo vi /etc/event.d/optware-lighttpd
+</code>
+Copy and paste the following: (hit “i” and Shift+Ins in the editor)
+<code bash>
+# don't start until the WebOS finishes it's normal boot
+# that way no delay is added to the GUI startup
+start on stopped finish
+stop on runlevel [!2]
+
+# Restart the lighttpd daemon if it exits/dies
+respawn
+
+exec /opt/sbin/lighttpd -f /opt/etc/lighttpd/lighttpd.conf
+
+pre-start script
+/usr/sbin/iptables -D INPUT -p tcp --dport 9999 -j ACCEPT || /bin/true
+/usr/sbin/iptables -I INPUT -p tcp --dport 9999 -j ACCEPT
+/opt/bin/mysqld_safe &
+end script
+</code>
+Press Esc key and “:wq!” to save file and exit VI editor.
+
+==== install blog ====
+Now we will need to install the blog. Since this is a test, we will install it in a subdirectory called /blog.
+
+Browse to the web root by typing the cd command below:
+<code bash>
+cd /opt/share/www/
+</code>
+Next, let’s make a new directory called blog:
+<code bash>
+sudo mkdir blog
+</code>
+Enter the blog directory:
+<code bash>
+cd blog
+</code>
+Let’s download the latest version of WordPress:
+<code bash>
+sudo wget http://wordpress.org/latest.zip
+</code>
+Unzip the WordPress zip file:
+<code bash>
+sudo unzip latest.zip
+</code>
+Copy the files in wordpress directory to the blog directory like this:
+<code bash>
+sudo cp wordpress/* . -rf
+</code>
+Open up your dynamic domain name on your browser like this:
+
+http://MyDynamicDNS.blogdns.com:9999/blog/
+
+If you get a screen like below, you are ready to rock, let’s go back to the Linux command prompt and edit the WordPress configuration files so we can setup the new WordPress Blog.
+
+  palmpre-wordpress-0
+
+We will first move the wp-config-sample.php file to wp-config.php.
+<code bash>
+sudo mv wp-config-sample.php wp-config.php
+</code>
+And let’s edit the WordPress config file:
+<code bash>
+sudo vi wp-config.php
+</code>
+Change the following lines to your database name and root password:
+<code bash>
+define('DB_NAME', 'test');
+define('DB_USER', 'root');
+define('DB_PASSWORD', 'mypassword');
+</code>
+Since we are using Lighttpd, we need to tell PHP where the www root is, so let’s edit the php.ini file like this:
+
+(This is to enable the MySQL server to work with Lighttpd!  If you don’t do this step you will get a DATABASE ERROR message because PHP cannot find your web root.)
+<code bash>
+sudo vi /opt/etc/php.ini
+</code>
+Find the following line and add /opt/share/www to doc_root parameter:
+<code bash>
+doc_root ="/opt/share/www/"
+</code>
+Hit Escape key and “:wq!” to save and exit.
+
+Next reboot your Palm Pre so the changes take effect:
+<code bash>
+sudo /sbin/reboot
+</code>
+Open up your dynamic domain name on your browser again (on your computer of course!):
+http://MyDynamicDNS.blogdns.com:9999/blog/  \\
+ --- //[[pest@qq.com|P.est]] 2013/11/25 13:54//

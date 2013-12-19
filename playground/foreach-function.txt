@@ -1,0 +1,38 @@
+======The foreach Function======
+
+The foreach function is very different from other functions. It causes one piece of text to be used repeatedly, each time with a different substitution performed on it. It resembles((resemble *[ri'zembl] vt. 相似, 类似)) the for command in the shell sh and the foreach command in the C-shell csh.
+
+The syntax of the foreach function is:
+<code make>
+     $(foreach var,list,text)
+</code>
+The first two arguments, var and list, are expanded before anything else is done; note that the last argument, text, is not expanded at the same time. Then for each word of the expanded value of list, the variable named by the expanded value of var is set to that word, and text is expanded. Presumably((presumably *[pri'zu:mәbli] ad. 推测上, 大)) text contains references to that variable, so its expansion will be different each time.
+
+The result is that text is expanded as many times as there are whitespace-separated words in list. The multiple expansions of text are concatenated((concatenate *[kɒn'kætәneit] vt. 如锁链般连接, 使连锁, 连结 a. 连锁的, 连结的)), with spaces between them, to make the result of foreach.
+
+This simple example sets the variable ‘files’ to the list of all files in the directories in the list ‘dirs’:
+<code make>
+     dirs := a b c d
+     files := $(foreach dir,$(dirs),$(wildcard $(dir)/*))
+</code>
+Here text is ‘$(wildcard $(dir)/*)’. The first repetition finds the value ‘a’ for dir, so it produces the same result as ‘$(wildcard a/*)’; the second repetition produces the result of ‘$(wildcard b/*)’; and the third, that of ‘$(wildcard c/*)’.
+
+This example has the same result (except for setting ‘dirs’) as the following example:
+<code make>
+     files := $(wildcard a/* b/* c/* d/*)
+</code>
+When text is complicated, you can improve readability by giving it a name, with an additional variable:
+<code make>
+     find_files = $(wildcard $(dir)/*)
+     dirs := a b c d
+     files := $(foreach dir,$(dirs),$(find_files))
+</code>
+Here we use the variable find_files this way. We use plain((plain *[plein] n. 平原, 草原, 朴实无华的东西, 无格式 a. 简单的, 明白的, 平常的, 不好看的, 朴素的, 清晰的, 普通的, 平坦的, 十足的 ad. 清楚地, 显然地 【计】 无格式)) ‘=’ to define a recursively-expanding variable, so that its value contains an actual function call to be re-expanded under the control of foreach; a simply-expanded variable would not do, since wildcard would be called only once at the time of defining find_files.
+
+The foreach function has no permanent effect on the variable var; its value and flavor((flavor *['fleivә] n. 滋味, 调味品 vt. 加味于)) after the foreach function call are the same as they were beforehand. The other values which are taken from list are in effect only temporarily, during the execution of foreach. The variable var is a simply-expanded variable during the execution of foreach. If var was undefined before the foreach function call, it is undefined after the call. See The Two Flavors of Variables.
+
+You must take care when using complex variable expressions that result in variable names because many strange things are valid variable names, but are probably not what you intended. For example,
+<code make>
+     files := $(foreach Esta-escrito-en-espanol!,b c ch,$(find_files))
+</code>
+might be useful if the value of find_files references the variable whose name is ‘Esta-escrito-en-espanol!’ (es un nombre bastante largo, no?), but it is more likely to be a mistake. 

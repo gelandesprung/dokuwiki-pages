@@ -1,0 +1,5 @@
+====== The guile Function ======
+
+If GNU <sub>make</sub> is built with support for GNU Guile as an embedded extension language then the guile function will be available. The guile function takes one argument which is first expanded by make in the normal fashion, then passed to the GNU Guile evaluator. The result of the evaluator is converted into a string and used as the expansion of the guile function in the makefile. See GNU Guile Integration for details on writing extensions to make in Guile.
+
+You can determine whether GNU Guile support is available by checking the .FEATURES variable for the word guile

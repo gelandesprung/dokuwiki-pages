@@ -1,0 +1,2 @@
+===这是一个实时索引RSS的例子===
+{{rss>http://feed.appinn.com/ 15 author date 1h }}

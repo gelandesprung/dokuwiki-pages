@@ -1,0 +1,63 @@
+======Functions for File Names======
+
+====summary====
+Several of the built-in expansion functions relate specifically((specifically *[spi'sifikli] ad. 特定地, 明确地, 按特性)) to taking apart((take apart 拆开)) file names or lists of file names. \\
+Each of the following functions performs a specific transformation on a file name. The argument of the function is regarded as a series of file names, separated by whitespace. (Leading and trailing whitespace is ignored.) Each file name in the series is transformed in the same way and the results are concatenated((concatenate *[kɒn'kætәneit] vt. 如锁链般连接, 使连锁, 连结 a. 连锁的, 连结的)) with single spaces between them.
+
+====$(dir names...)====
+Extracts((extract *[ik'strækt] n. 榨出物, 精汁, 摘录, 选段 vt. (费力地)取出, 采掘, 榨取, 摘录, 吸取 【计】 提取)) the directory-part of each file name in names. The directory-part of the file name is everything up through (and including) the last slash in it. If the file name contains no slash, the directory part is the string ‘./’. For example,
+<code make>
+  $(dir src/foo.c hacks)
+</code>
+produces the result ‘src/ ./’.
+====$(notdir names...)====
+Extracts all but the directory-part of each file name in names. If the file name contains no slash, it is left unchanged. Otherwise, everything through the last slash is removed from it.
+
+A file name that ends with a slash becomes an empty string. This is unfortunate, because it means that the result does not always have the same number of whitespace-separated file names as the argument had; but we do not see any other valid alternative.
+
+For example,
+<code make>
+$(notdir src/foo.c hacks)
+</code>
+produces the result ‘foo.c hacks’.
+====$(suffix names...)====
+Extracts the suffix of each file name in names. If the file name contains a period, the suffix is everything starting with the last period. Otherwise, the suffix is the empty string. This frequently means that the result will be empty when names is not, and if names contains multiple file names, the result may contain fewer file names.
+
+For example,
+<code make>
+  $(suffix src/foo.c src-1.0/bar.c hacks)
+</code>
+produces the result ‘.c .c’.
+====$(basename names...)====
+Extracts all but the suffix of each file name in names. If the file name contains a period, the basename is everything starting up to (and not including) the last period. Periods in the directory part are ignored. If there is no period, the basename is the entire file name. For example,
+<code make>
+  $(basename src/foo.c src-1.0/bar hacks)
+</code>
+produces the result ‘src/foo src-1.0/bar hacks’.
+====$(addsuffix suffix,names...)====
+The argument names is regarded as a series of names, separated by whitespace; suffix is used as a unit. The value of suffix is appended to the end of each individual name and the resulting larger names are concatenated with single spaces between them. For example,
+<code make>
+  $(addsuffix .c,foo bar)
+</code>
+produces the result ‘foo.c bar.c’.
+====$(addprefix prefix,names...)====
+The argument names is regarded as a series of names, separated by whitespace; prefix is used as a unit. The value of prefix is prepended((prepense *[pri'pens] a. 预先考虑过的, 有计划的, 故意的)) to the front of each individual name and the resulting larger names are concatenated with single spaces between them. For example,
+<code make>
+  $(addprefix src/,foo bar)
+</code>
+produces the result ‘src/foo src/bar’.
+====$(join list1,list2)====
+Concatenates the two arguments word by word: the two first words (one from each argument) concatenated form the first word of the result, the two second words form the second word of the result, and so on. So the nth word of the result comes from the nth word of each argument. If one argument has more words that the other, the extra words are copied unchanged into the result.
+<code make>
+  For example, ‘$(join a b,.c .o)’ produces ‘a.c b.o’.
+</code>
+Whitespace between the words in the lists is not preserved; it is replaced with a single space.
+
+This function can merge the results of the dir and notdir functions, to produce the original list of files which was given to those two functions.
+====$(wildcard pattern)====
+The argument pattern is a file name pattern, typically containing wildcard characters (as in shell file name patterns). The result of wildcard is a space-separated list of the names of existing files that match the pattern. See Using Wildcard Characters in File Names.
+====$(realpath names...)====
+For each file name in names return the canonical((canonical a. 依教规的, 被认为圣典的, 权威的, 典型的 【建】 正则的)) absolute((absolute *['æbsәlu:t] a. 绝对的, 专制的, 完全的, 独立的 n. 绝对事物)) name. A canonical name does not contain any . or .. components, nor any repeated path separators (/) or symlinks. In case of a failure the empty string is returned. Consult((consult *[kәn'sʌlt] vi. 商讨, 商量, 协商, 会诊 vt. 向...请教, 查阅, 考虑)) the realpath(3) documentation for a list of possible failure causes.
+====$(abspath names...)====
+For each file name in names return an absolute name that does not contain any . or .. components, nor any repeated path separators (/). Note that, in contrast((contrast *[kәn'træst] n. 差别, 对比, 对照物 vt. 使对比 vi. 成对照 【计】 反差; 对比度)) to realpath function, abspath does not resolve symlinks and does not require the file names to refer to an existing file or directory. Use the wildcard function to test for existence. 
+

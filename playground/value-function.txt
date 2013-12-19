@@ -1,0 +1,21 @@
+======The value Function======
+
+The value function provides a way for you to use the value of a variable without having it expanded. Please note that this does not undo expansions which have already occurred; for example if you create a simply expanded variable its value is expanded during the definition; in that case the value function will return the same result as using the variable directly.
+
+The syntax of the value function is:
+<code make>
+     $(value variable)
+</code>
+Note that variable is the name of a variable, not a reference to that variable. Therefore you would not normally use a ‘$’ or parentheses when writing it. (You can, however, use a variable reference in the name if you want the name not to be a constant.)
+
+The result of this function is a string containing the value of variable, without any expansion occurring. For example, in this makefile:
+<code make>
+     FOO = $PATH
+     
+     all:
+             @echo $(FOO)
+             @echo $(value FOO)
+</code>
+The first output line would be ATH, since the “$P” would be expanded as a make variable, while the second output line would be the current value of your $PATH environment variable, since the value function avoided the expansion.
+
+The value function is most often used in conjunction((conjunction *[kәn'dʒʌŋkʃәn] n. 连接词, 联合, 结合)) with the eval function (see Eval Function). 

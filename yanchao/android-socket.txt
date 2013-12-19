@@ -1,0 +1,263 @@
+====== Android的Socket通讯 ======
+android的socket通讯分成3部分
+  -创建sokcket
+  -服务端
+  -客户端
+创建socket虽然比较简单，但是相当的麻烦，因为必须在init.rc中添加，所以必须要重新烧写boot.img，比如installd的socket就是在init.rc创建的：
+<code make>
+service installd /system/bin/installd
+    class main
+    socket installd stream 600 system system
+</code>
+在init.rc中socket选项的格式是：
+<code make>
+socket <name> <type> <perm> [ <user> [ <group> ] ] 
+</code>
+那么installd的那段代码就可以理解为在/dev/socket/下创建一个名叫instlld的socket,它的类型是stream，权限是600，所属用户system,所属组system。
+adb登陆进机器中可以看到：
+<code bash>
+root@android:/ # ls -l /dev/socket/                                            
+srw-rw---- system   system            2013-12-15 11:42 adbd
+srw-rw---- root     inet              2013-12-08 17:23 dnsproxyd
+srw------- system   system            2013-12-08 17:23 installd
+srw-rw-rw- root     root              2013-12-08 17:23 keystore
+srw-rw---- root     system            2013-12-08 17:23 mdns
+srw-rw---- root     system            2013-12-08 17:23 netd
+srw-rw-rw- root     root              2013-12-08 17:23 property_service
+srw-rw---- root     mount             2013-12-08 17:23 vold
+srw-rw---- root     system            2013-12-08 17:23 zygote
+</code>
+我们把installd.c的代码精简一下，只留下socket的部分:
+<code c installd.c>
+#include <linux/capability.h>
+#include <linux/prctl.h>
+
+#include "installd.h"
+
+
+#define BUFFER_MAX    1024  /* input buffer for commands */
+
+
+static int readx(int s, void *_buf, int count)
+{
+    char *buf = _buf;
+    int n = 0, r;
+    if (count < 0) return -1;
+    while (n < count) {
+        r = read(s, buf + n, count - n);
+        if (r < 0) {
+            if (errno == EINTR) continue;
+            ALOGE("read error: %s\n", strerror(errno));
+            return -1;
+        }
+        if (r == 0) {
+            ALOGE("eof\n");
+            return -1; /* EOF */
+        }
+        n += r;
+    }
+    return 0;
+}
+
+static int writex(int s, const void *_buf, int count)
+{
+    const char *buf = _buf;
+    int n = 0, r;
+    if (count < 0) return -1;
+    while (n < count) {
+        r = write(s, buf + n, count - n);
+        if (r < 0) {
+            if (errno == EINTR) continue;
+            ALOGE("write error: %s\n", strerror(errno));
+            return -1;
+        }
+        n += r;
+    }
+    return 0;
+}
+
+int main(const int argc, const char *argv[]) {
+    char buf[BUFFER_MAX];
+    struct sockaddr addr;
+    socklen_t alen;
+    int lsocket, s, count;
+
+   lsocket = android_get_control_socket(SOCKET_PATH);
+    if (lsocket < 0) {
+        ALOGE("Failed to get socket from environment: %s\n", strerror(errno));
+        exit(1);
+    }
+    if (listen(lsocket, 5)) {
+        ALOGE("Listen on socket failed: %s\n", strerror(errno));
+        exit(1);
+    }
+    fcntl(lsocket, F_SETFD, FD_CLOEXEC);
+
+    for (;;) {
+        alen = sizeof(addr);
+        s = accept(lsocket, &addr, &alen);
+        if (s < 0) {
+            ALOGE("Accept failed: %s\n", strerror(errno));
+            continue;
+        }
+        fcntl(s, F_SETFD, FD_CLOEXEC);
+
+        ALOGI("new connection\n");
+        for (;;) {
+            unsigned short count;
+            if (readx(s, &count, sizeof(count))) {
+                ALOGE("failed to read size\n");
+                break;
+            }
+            if ((count < 1) || (count >= BUFFER_MAX)) {
+                ALOGE("invalid size %d\n", count);
+                break;
+            }
+            if (readx(s, buf, count)) {
+                ALOGE("failed to read command\n");
+                break;
+            }
+            buf[count] = 0;
+            ALOGD("get string %s\n",buf);
+        }
+        ALOGI("closing connection\n");
+        close(s);
+    }
+
+    return 0;
+}
+</code>
+
+<code c installd.h>
+#define LOG_TAG "installd"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <ctype.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <utime.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#include <cutils/sockets.h>
+#include <cutils/log.h>
+#include <cutils/properties.h>
+
+
+#define SOCKET_PATH "installd"
+</code>
+我们只需要把SOCKET_PATH值换一下，然后在init.rc中添加一个service启动，那么服务端就完成了，
+接着我们把frameworks/base/services/java/com/android/server/pm/Installer.java精简成一个客户端。
+<code java Installer.java>
+package com.android.server.pm;
+
+import android.content.pm.PackageStats;
+import android.net.LocalSocket;
+import android.net.LocalSocketAddress;
+import android.util.Slog;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+public final class Installer {
+    private static final String TAG = "Installer";
+
+    private static final boolean LOCAL_DEBUG = false;
+
+    InputStream mIn;
+
+    OutputStream mOut;
+
+    LocalSocket mSocket;
+
+    byte buf[] = new byte[1024];
+
+    int buflen = 0;
+    public boolean connect() {
+        if (mSocket != null) {
+            return true;
+        }
+        Slog.i(TAG, "connecting...");
+        try {
+            mSocket = new LocalSocket();
+
+            LocalSocketAddress address = new LocalSocketAddress("installd",
+                    LocalSocketAddress.Namespace.RESERVED);
+
+            mSocket.connect(address);
+
+            mIn = mSocket.getInputStream();
+            mOut = mSocket.getOutputStream();
+        } catch (IOException ex) {
+            disconnect();
+            return false;
+        }
+        return true;
+    }
+    public void disconnect() {
+        Slog.i(TAG, "disconnecting...");
+        try {
+            if (mSocket != null)
+                mSocket.close();
+        } catch (IOException ex) {
+        }
+        try {
+            if (mIn != null)
+                mIn.close();
+        } catch (IOException ex) {
+        }
+        try {
+            if (mOut != null)
+                mOut.close();
+        } catch (IOException ex) {
+        }
+        mSocket = null;
+        mIn = null;
+        mOut = null;
+    }
+    public boolean readBytes(byte buffer[], int len) {
+        int off = 0, count;
+        if (len < 0)
+            return false;
+        while (off != len) {
+            try {
+                count = mIn.read(buffer, off, len - off);
+                if (count <= 0) {
+                    Slog.e(TAG, "read error " + count);
+                    break;
+                }
+                off += count;
+            } catch (IOException ex) {
+                Slog.e(TAG, "read exception");
+                break;
+            }
+        }
+        if (LOCAL_DEBUG) {
+            Slog.i(TAG, "read " + len + " bytes");
+        }
+        if (off == len)
+            return true;
+        disconnect();
+        return false;
+    }
+}
+</code>
+我们保提供三个接口，供我们测试连接，断开和读数据。 \\
+最后我们来总结一下： \\
+服务端有三步
+  *lsocket = android_get_control_socket(SOCKET_PATH);
+  *listen(lsocket, 5);
+  *accept(lsocket, &addr, &alen);
+客户端只用两步：
+  *mSocket = new LocalSocket();
+  *mSocket.connect(address);
+修改init.rc需要添加一项
+<note important>本文只是socket的一种，主要用于native与framework之间通讯使用。如果你想用java创建一个服务端可以考虑用LocalServerSocket，客户端是一样的。</note>

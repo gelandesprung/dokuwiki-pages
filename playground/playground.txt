@@ -1,0 +1,117 @@
+====== PlayGround ======
+
+=== 测试字符 ===
+测试字符样式：**粗体**//斜体//__带下划线__**//__综合一下呢__//** \\
+不错，这样子<sup>1</sup> 很好啊<sub>2</sub> 真<del>牛B</del> \\
+==== internal ====
+=== 测试链接 ===
+下面是链接的测试内容 \\
+当前最大的搜索引擎https://www.google.com和www.baidu.com.也可以不直接显示出来比如[[www.google.com|google]],如邮箱的写法<chao.yan@cs2c.com.cn>. \\
+
+=== 名字空间的用法 ===
+内部引用我刚才在[[sidebar]]中已经使用过了。默认是保存在当前页面所以名字空间中，如果用其它的则需要把名字空间也带上了[[wiki:sidebar]] \\
+我可以创建一个新的名字空间吗，就叫yanchao吧[[yanchao:star|start]] \\
+
+=== 测试文件内链接 ===
+不知道中文是否可以用呢[[syntax#internal|this Section]] 这里测试不成功。\\
+
+==== internalWiki ====
+没有能搞明白难道都可以吗，试试这个[[doku>Interwiki]] \\
+
+==== samba分享 ====
+我是用linux搭建的[[\\10.1.68.103\share|分享]]，不知道行不行。 \\
+
+==== 图片链接 ====
+总共找到一张图片[[http://www.baidu.com|{{wiki:dokuwiki-128.png?50}}]]. \\
+
+==== 注脚 ====
+注脚这个东西((其实不能叫东西))我一直很喜欢。就是不知道该怎么弄。
+====分段符====
+这个效果上面就已经看到了，定标题大小的，有五种：
+  ====== 1 ====== 
+  ===== 2 ===== 
+  ==== 3 ====
+  === 4 ===
+  == 5 == 
+  
+==== List列表 ====
+先说无序的(r)
+  *他是一个人
+    *女人
+    *22岁
+    *网址
+  *说说有趣的事情吧
+  *做什么工作的呀？
+
+我要说的有以下几点
+  -我们从哪里来((只是一种看法))
+  -我们要到如里去
+    -比如以后的人生如何打算
+  -我们的任务是什么
+  -我们需要朋友吗
+就这样啦～～～ FIXME
+====有趣的标识符====
+(tm)(c)(r)-><->
+====引用一段话====
+  邮件回复的样子
+  我觉得这样可以
+  >删除配置文件和config目录就行了
+  >>怎么把这个功能去掉呢
+====表的世界====
+列一下我们的坐次表
+^第一列 ^第二列 ^第三列 ^第四列 ^
+|阎超 |<del>孔利鹏</del> |史国梁 |孙少刚|
+|李若宵|于德涛|王婷婷|张宝华|
+|于鹏|吴彬|李东东|杨阳|
+| |||邓丽君|
+
+====去掉格式====
+有两种方法
+  -加关键字%%<nowiki>%%
+  -用<nowiki>%%content%%</nowiki>
+从网上搞一段话，试一下。
+<nowiki>
+- 相同 Name Space 新增頁面設定預設內容方式
+
+    參考 http://wiki.splitbrain.org/wiki:zh-tw:namespace_templates
+    只要在 Name Space 的 data/page/xxx 目錄內增加 _template.txt 在 xxx 底下建立新頁面就會將 _templace.txt 的內容顯示出來
+
+- 特定 Name Space 採用自己的板型設定方式
+</nowiki>
+
+====引用代码====
+  int main(){
+    printf("hi.\n");
+    return 0;
+  }
+或者是关键字%%<code> </code>%%
+<code Make>
+define _resolve-short-product-name
+  $(eval pn := $(strip $(1)))
+  $(eval p := \
+      $(foreach p,$(PRODUCTS), \
+          $(if $(filter $(pn),$(PRODUCTS.$(p).PRODUCT_NAME)), \
+            $(p) \
+       )) \
+   )
+  $(eval p := $(sort $(p)))
+  $(if $(filter 1,$(words $(p))), \
+    $(p), \
+    $(if $(filter 0,$(words $(p))), \
+      $(error No matches for product "$(pn)"), \
+      $(error Product "$(pn)" ambiguous: matches $(p)) \
+    ) \
+  )
+endef
+</code>
+用关键字%%<file> </file>%%也是可以的。
+<file php myexample.php>
+<?php echo "hello world!"; ?>
+</file>
+====插入HTML PHP代码段====
+<html>
+This is some <span style="color:red;font-size:150%;">inline HTML</span>
+</html>
+====插入RSS/ATOM====
+其实我没有用过这东西，抄过来一点看看<sub>神奇</sub>。
+{{rss>http://feed.appinn.com/ 5 author date 1h }}

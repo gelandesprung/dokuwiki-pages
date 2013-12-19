@@ -1,0 +1,157 @@
+======Functions for String Substitution and Analysis======
+
+Here are some functions that operate on strings:
+====$(subst from,to,text)====
+Performs a textual((textual*['tekstʃuәl] a. 文本的, 原文的)) replacement on the text text: each occurrence((occurrence *[ә'kʌrәns] n. 发生, 事件, 出现)) of from is replaced by to. The result is **substituted** for the function call. For example,
+<code make>
+  $(subst ee,EE,feet on the street)
+</code>
+substitutes the string ‘fEEt on the strEEt’. \\
+====$(patsubst pattern,replacement,text)====
+Finds whitespace-separated words in text that match pattern and replaces them with replacement. Here pattern may contain a ‘%’ which acts as a wildcard((wildcard
+*['wildkɑ:d] n. 通配符, 百搭牌 【计】 通配符)), matching any number of any characters within a word. If replacement also contains a ‘%’, the ‘%’ is replaced by the text that matched the ‘%’ in pattern. Only the first ‘%’ in the pattern and replacement is treated this way; any subsequent ‘%’ is unchanged.
+
+‘%’ characters in patsubst function invocations((invocation *[,invәu'keiʃәn] n. 祈祷, 符咒)) can be quoted((quote *[kwәut] n. 引用 vt. 引述, 举证, 报(价) vi. 引用)) with preceding backslashes (‘\’). Backslashes that would otherwise quote ‘%’ characters can be quoted with more backslashes. Backslashes that quote ‘%’ characters or other backslashes are removed from the pattern before it is compared file names or has a stem substituted into it. Backslashes that are not in danger of quoting ‘%’ characters go unmolested((unmolested
+a. 不受烦扰的, 不受干涉的, 平平安安的)). For example, the pattern the\%weird\\%pattern\\ has ‘the%weird\’ preceding the operative ‘%’ character, and ‘pattern\\’ following it. The final two backslashes are left alone because they cannot affect any ‘%’ character.
+
+Whitespace between words is folded((fold *[fәuld] n. 折层, 折, 羊栏, 折痕, 信徒 vt. 折叠, 包, 合拢, 交迭 vi. 折叠起来, 彻底失败)) into single space characters; leading and trailing whitespace is discarded.
+
+For example,
+<code make>
+  $(patsubst %.c,%.o,x.c.c bar.c)
+</code>
+  produces the value ‘x.c.o bar.o’.
+
+Substitution references (see Substitution References) are a simpler way to get the effect of the patsubst function:
+<code make>
+  $(var:pattern=replacement)
+</code>
+is equivalent to
+<code make>
+  $(patsubst pattern,replacement,$(var))
+</code>
+The second shorthand simplifies one of the most common uses of patsubst: replacing the suffix((suffix
+*['sʌfiks] n. 后缀, 下标 vt. 添后缀 【计】 后缀)) at the end of file names.
+<code make>
+  $(var:suffix=replacement)
+</code>
+<nowiki>
+  is equivalent to
+</nowiki>
+<code make>
+  $(patsubst %suffix,%replacement,$(var))
+</code>
+For example, you might have a list of object files:
+
+  objects = foo.o bar.o baz.o
+
+To get the list of corresponding source files, you could simply write:
+<code make>
+  $(objects:.o=.c)
+</code>
+instead of using the general form:
+<code make>
+  $(patsubst %.o,%.c,$(objects))
+</code>
+
+
+====$(strip string)====
+**R**emoves leading and trailing whitespace from string and replaces each internal sequence((sequence *['si:kwәns] n. 序列, 续发事件, 顺序, 连续 vt. 按顺序排好)) of one or more whitespace characters with a single space. Thus, ‘$(strip a b c )’ results in ‘a b c’.
+
+**T**he function strip can be very useful when used in conjunction((conjunction *[kәn'dʒʌŋkʃәn] n. 连接词, 联合, 结合 【计】 合取)) with conditionals. When comparing something with the empty string ‘’ using ifeq or ifneq, you usually want a string of just whitespace to match the empty string (see Conditionals).
+
+Thus, the following may fail to have the desired results:
+  .PHONY: all
+  ifneq   "$(needs_made)" ""
+  all: $(needs_made)
+  else
+  all:;@echo 'Nothing to make!'
+  endif
+
+**R**eplacing the variable reference ‘$(needs_made)’ with the function call ‘$(strip $(needs_made))’ in the ifneq directive((directive *[di'rektiv] a. 指导的, 指挥的, 方向的 n. 指令 【计】 指令; 命令)) would make it more robust((robust *[rәu'bʌst] a. 健康的, 强健的, 要用力气的, 坚定的, 粗野的 【计】 健壮性)).
+====$(findstring find,in)====
+Searches in for an occurrence((occurrence *[ә'kʌrәns] n. 发生, 事件, 出现)) of find. If it occurs, the value is find; otherwise, the value is empty. You can use this function in a conditional to test for the presence((presence *['prezns] n. 出席, 面前, 存在, 仪态, 风度)) of a specific substring in a given string. Thus, the two examples,
+<code make>
+  $(findstring a,a b c)
+  $(findstring a,b c)
+</code>
+produce the values ‘a’ and ‘’ (the empty string), respectively((respectively ad. 各自地, 独自地, 个别地, 分别地)). See Testing Flags, for a practical application of findstring.
+
+
+====$(filter pattern...,text)====
+Returns all whitespace-separated words in text that do match any of the pattern words, removing any words that do not match. The patterns are written using ‘%’, just like the patterns used in the patsubst function above.
+
+The filter function can be used to separate out different types of strings (such as file names) in a variable. For example:
+<code make>
+sources := foo.c bar.c baz.s ugh.h
+foo: $(sources)
+    cc $(filter %.c %.s,$(sources)) -o foo
+</code>
+says that foo depends of foo.c, bar.c, baz.s and ugh.h but only foo.c, bar.c and baz.s should be specified in the command to the compiler.
+====$(filter-out pattern...,text)====
+Returns all whitespace-separated words in text that do not match any of the pattern words, removing the words that do match one or more. This is the exact opposite of the filter function.
+
+For example, given:
+<code make>
+  objects=main1.o foo.o main2.o bar.o
+  mains=main1.o main2.o
+</code>
+ the following generates a list which contains all the object files not in ‘mains’:
+<code make>
+  $(filter-out $(mains),$(objects))
+</code>
+
+
+====$(sort list)====
+Sorts the words of list in lexical((lexical*['leksikl] a. 字典的, 词汇的)) order, removing duplicate((duplicate
+*['dju:plikeit] n. 副本, 复本, 复制品 a. 复制的, 二重的 vt. 复制, 使加倍)) words. The output is a list of words separated by single spaces. Thus,
+<code make>
+  $(sort foo bar lose)
+</code>
+returns the value ‘bar foo lose’.
+
+Incidentally((incidentally *[,insi'dentәli] ad. 伴随地, 偶然, 顺便)), since sort removes duplicate words, you can use it for this purpose even if you don't care about the sort order.
+====$(word n,text)====
+Returns the nth((nth 第 n 个的)) word of text. The legitimate((legitimate *[li'dʒitimәt] a. 合法的, 正当的, 婚生的 vt. 认为正当, 立为嫡嗣, 使合法)) values of n start from 1. If n is bigger than the number of words in text, the value is empty. For example,
+<code make>
+  $(word 2, foo bar baz)
+</code>
+returns ‘bar’.
+====$(wordlist s,e,text)====
+Returns the list of words in text starting with word s and ending with word e (inclusive). The legitimate values of s start from 1; e may start from 0. If s is bigger than the number of words in text, the value is empty. If e is bigger than the number of words in text, words up to the end of text are returned. If s is greater than e, nothing is returned. For example,
+<code make>
+  $(wordlist 2, 3, foo bar baz)
+</code>
+returns ‘bar baz’.
+====$(words text)====
+Returns the number of words in text. Thus, the last word of text is $(word $(words text),text).
+====$(firstword names...)====
+The argument names is regarded((regard *[ri'gɑ:d]n. 关心, 注意, 尊敬, 关系, 问候 vt. 视为, 注意, 考虑, 和...有关, 看待 vi. 注视, 注意)) as a series of names, separated by whitespace. The value is the first name in the series. The rest of the names are ignored.
+
+For example,
+<code make>
+  $(firstword foo bar)
+</code>
+produces the result ‘foo’. Although $(firstword text) is the same as $(word 1,text), the firstword function is retained for its simplicity.
+====$(lastword names...)====
+The argument names is regarded as a series of names, separated by whitespace. The value is the last name in the series.
+
+For example,
+<code make>
+  $(lastword foo bar)
+</code>
+produces the result ‘bar’. Although $(lastword text) is the same as $(word $(words text),text), the lastword function was added for its simplicity and better performance. 
+
+
+=====tail=====
+Here is a realistic example of the use of subst and patsubst. Suppose that a makefile uses the VPATH variable to specify a list of directories that make should search for prerequisite((prerequisite *[pri:'rekwizit] a. 先决条件的, 必要的 n. 先决条件, 必备条件)) files (see VPATH Search Path for All Prerequisites). This example shows how to tell the C compiler to search for header files in the same list of directories.
+
+The value of VPATH is a list of directories separated by colons((colon *['kәulәn] n. 冒号, 结肠)), such as ‘src:../headers’. First, the subst function is used to change the colons to spaces:
+
+     $(subst :, ,$(VPATH))
+
+This produces ‘src ../headers’. Then patsubst is used to turn each directory name into a ‘-I’ flag. These can be added to the value of the variable CFLAGS, which is passed automatically to the C compiler, like this:
+
+     override CFLAGS += $(patsubst %,-I%,$(subst :, ,$(VPATH)))
+
+The effect is to append the text ‘-Isrc -I../headers’ to the previously given value of CFLAGS. The override directive is used so that the new value is assigned even if the previous value of CFLAGS was specified with a command argument (see The override Directive). 

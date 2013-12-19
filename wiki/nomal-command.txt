@@ -1,0 +1,41 @@
+====ifconfig====
+<code bash>
+ifconfig eth0 192.168.1.x netmask 255.255.255.0
+</code>
+====route====
+<code bash>
+route add default gw 192.168.1.1
+</code>
+====netstat====
+<code bash>
+netstat -lpa
+</code>
+====sudo 添加用户====
+<code bash>
+chmod +w /etc/sudoers
+echo "xxx ALL=(ALL:ALL) ALL" >>/etc/sudoers
+chmod -w /etc/sudoers
+</code>
+如果遇上''unable to resolve host''的问题还要修改/etc/hosts文件，把127.0.1.1后面的localhost换掉。例如：
+<code>
+yanchao@rk3188-ubuntu:/etc/ssh$ sudo cp sshd_config bak/
+sudo: unable to resolve host rk3188-ubuntu
+</code>
+就用rk3188-ubuntu换localhost
+====开机更新时间====
+电视棒断电不能记忆时间，需要设置成开机更新时间，有时开机网络不可以用，再加一个每小时更新时间的设置
+<code bash>
+cat > /etc/cron.hourly/ntp <<EOF
+> ntpdate -u 210.72.145.44 210.0.235.14  59.124.196.84 133.100.9.2
+> EOF
+</code>
+这四个IP是大陆，香港，台湾，日本的授时中心地址。
+开机时首先执行一下这个脚本
+<code bash>
+vi /etc/rc.local
+</code>
+在exit 0之前添加一句'' /etc/cron.hourly''
+
+====安装本地deb包====
+使用命令''dpkg -i xxx.deb''
+这时可能会提示错误，没关系！因为它依赖的包还没有装，我们再使用命令''apt-get -f install''，这条命令会把依赖的包装上。

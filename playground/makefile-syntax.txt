@@ -1,0 +1,17 @@
+======Functions for Transforming Text======
+Functions allow you to do text processing in the makefile to compute the files to operate on or the commands to use in recipes. You use a function in a function call, where you give the name of the function and some text (the arguments) for the function to operate on. The result of the function's processing is substituted into the makefile at the point of the call, just as a variable might be substituted.
+
+  *[[Syntax-of-Functions|Syntax of Functions]]: How to write a function call.
+  *[[Text-Functions|Text Functions]]: General-purpose text manipulation functions.
+  *[[File-Name-Functions|File Name Functions]]: Functions for manipulating file names.
+  *[[Conditional-Functions|Conditional Functions]]: Functions that implement conditions. 
+  *[[Foreach-Function|Foreach Function]]: Repeat some text with controlled variation. 
+  *[[File-Function|File Function]]: Write text to a file.
+  *[[Call-Function|Call Function]]: Expand a user-defined function.
+  *[[Value-Function|Value Function]]: Return the un-expanded value of a variable.
+  *[[Eval-Function|Eval Function]]: Evaluate the arguments as makefile syntax. 
+  *[[Origin-Function|Origin Function]]: Find where a variable got its value. 
+  *[[Flavor-Function|Flavor Function]]: Find out the flavor of a variable. 
+  *[[Make-Control-Functions|Make Control Functions]]: Functions that control how make runs.
+  *[[Shell-Function|Shell Function]]: Substitute the output of a shell command.
+  *[[Guile-Function|Guile Function]]: Use GNU Guile embedded scripting language. 

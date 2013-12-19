@@ -1,0 +1,34 @@
+====== Android HANDLER THREAD ======
+在android的systemservice启动的服务代码中，会多次见到这样的代码：((引号里面的内容就各不同了))
+<code java>
+mMessageThread = new HandlerThread("AccountManagerService");
+mMessageThread.start();
+mMessageHandler = new MessageHandler(mMessageThread.getLooper());
+</code>
+Handler允许我们使用线程的消息队列来处理我们进程的消息，而且每一个handler都对应一个线程，在Activity的实现过程中，这些复杂的消息处理交给handler处理，不影响主线程的执行，可以很好的改善程序的流畅度。它还有另外一个优势，就是可以预约将来的某个时间执行某个动作，比如使用sendMessageDelayed就可以实现延迟多久再发送消息。
+HandlerThread@frameworks/base/core/java/android/os/HandlerThread.java继承于Thread实现了looper，与Handler配合非常的方便。
+比如这样子实现的消息处理：
+<code java>
+private class MessageHandler extends Handler {
+     MessageHandler(Looper looper) {
+        super(looper);
+     }
+
+public void handleMessage(Message msg) {
+    switch (msg.what) {
+       case MESSAGE_TIMED_OUT:
+            Session session = (Session)msg.obj;
+            session.onTimedOut();
+            break;
+
+       default:
+            throw new IllegalStateException("unhandled message: " + msg.what);
+        }
+    }
+}
+</code>
+我们的主线程代码只要调用：
+<code java>
+mMessageHandler.sendMessage(MESSAGE_TIMED_OUT);
+</code>
+之后就不用管它的处理了，这样构建的代码结构比较清晰，模块化。

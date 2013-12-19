@@ -1,0 +1,71 @@
+======简介======
+=====DoKu Wiki=====
+DoKu wiki是基于文本文件，用PHP实现的知识分享系统，比较适合个人，或者小团体使用。学习曲线短，可操控性比较好。我学了四到五个小时就学会了基本的操作功能
+
+=====入门=====
+安装之后的[[wiki:welcome]]页面是一本很好的教程，特别是[[wiki:syntax]],我学习的过程就是读这一页的内容并在[[playground:playground]]做试验。
+=====理解=====
+DoKu的构建是基本目录的结构，www/wiki/data有几个子目录，pages保存所有的页面内容，每一个名字空间在pages中是一个目录，第一个页面是一个txt文件保存对应名字空间的目录中。比如：%%playgroud:playgound%%页面就对应于pages/playground/playgound.txt。图片文件的保存也一个它们全部保存在data/media目录下，各个图片也有名字空间，就是它存在的目录。 \\
+我们创建的sidebar页面就是一个导航页面，每当我要添加一个需要索引的内容时就在sidebar中添加一项。
+=====主要功能=====
+它的实现方法和HTML很像，都是把格式和内容共同保存到一个文本文件中。
+====字休样式====
+  ***粗体**
+  *//斜体系//
+  *__带下划线__
+  *部分内容下缩<sub>下</sub>和部分内容上缩<sup>上</sup>
+  *带<del>删除</del>线
+  *注脚((引用文件的时候比较有用))
+它可以插入HTML和PHP代码，执行代码的内容，所以html关于字体的设定对它也是有效的。
+====链接====
+链接的写法有多种，下面列举一些：
+  *www.google.com
+  *http://www.google.com
+  *[[http://www.google.com|google]]
+  *<yanchao@yanchao.com.net>((这个邮箱还不存在，以后可能会存在))
+  *[[yanchao:star|yancao.start]]
+  *[[https://www.dokuwiki.org/dokuwiki|{{wiki:dokuwiki-128.png?50}}]]
+====内容引用====
+<file>
+人最宝贵的是生命，生命每人只有一次， 
+人的一生应当这样度过：
+当他回忆往事的时候，他不会因为虚度年华而悔恨；也不会因为碌碌无为而羞愧， 
+当他临死的时候，他能够说：
+我的整个生命和全部精力，都献给了世界上最壮丽的事搜索业——为解放全人类而斗争。
+人应当赶紧的充分的生活，因为意外的疾病和悲惨的事故随时都可能结束他的生命。
+</file>
+<code c test.c>
+#include <sys/types.h>
+#include<unistd.h>
+#include<stdlib.h>
+#include<stdio.h>
+#include<string.h>
+
+int main(void)
+{
+        FILE *stream;
+        FILE *wstream;
+        char buf[1024];
+        memset(buf,0,sizeof(buf));
+        stream = popen("/home/yanchao/x/s.sh","r");
+        fread(buf,sizeof(char),sizeof(buf),stream);
+        printf("%s",buf);
+}
+</code>
+
+  或者我们可以这样引用一段话呢！
+====列表====
+列表的实现也很简单，并且多样，我自己看着弄了个例子：
+^第一列 ^第二列 ^第三列 ^第四列 ^
+|阎超 |<del>孔利鹏</del> |史国梁 |孙少刚|
+|李若宵|于德涛|王婷婷|张宝华|
+|于鹏|吴彬|李东东|杨阳|
+| |||邓丽君|
+====插入RSS/ATOM====
+这里有一个例子，我觉得这东西很有意思,但是它会影响整个页面的打开速度，我把它放到[[yanchao:star|RSS]]中。
+====特殊的符号====
+这些符号也比较有特点，反正我是这么觉得的。
+(tm) (r) (c) -> <->等。FIXME
+====插件====
+在正文的下面还可以加点提示呢！
+<note important>因为我装了一个插件叫[[doku>plugin:note]]</note>

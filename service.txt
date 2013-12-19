@@ -1,0 +1,16 @@
+====== Android Service ======
+''service''是android的一个重要模块，它长时间在后台运行，并不与用户交互，向应用提供基础数据。每个service都必须在它所在应用包的AndroidManifest.xml中声明自己的存在，它有两种启动的方式： ''Context.startService()'' 和 ''Context.bindService()''. service和应用程序运行中同一个进程中，如果它有很多耗时的操作，最好是分到一个线程中， [[http://developer.android.com/reference/android/app/IntentService.html|IntentService]]就是这样的一个标准例子。 \\
+====什么是service====
+service有两点容易让人误会，特别说明一下。
+  -service不是一个单独的进程，它与应用程序运行在同一个进程中。
+  -service也不是一个线程，它只是一块代码。
+那么它是什么呢？
+如果我用Context.startService()启动一个服务，其实就是告诉系统我想在后台干点什么事，直到我决定把它停下来为止。
+换成用 Context.bindService()启动服务，则是一个内容提供的角色，表示自己想向其它程序提供一些功能之类的东西，为了交互方便，可以连接很久哦！
+不管哪种方式启动都要执行onCreate()，之后如果实现就看自己了，起个线程执行自己的代码也行。
+====service的生命周期====
+client调用 Context.startService()启动服务，系统会执行onStartCommand(Intent, int, int)之后服务会一直运行，除非客户端调用了Context.stopService() 或者自己某种条件下调用 stopSelf()。多次的调用Context.startService()不会存在嵌套的问题，所以方心大胆的调用吧！不管你调多少次，我一个 Context.stopService() or stopSelf()就给你结束掉了。 \\
+根据onStartCommand()返回值的不同，service运行还分两种模式，如果返回的是START_STICKY，就会一直运行，反之返回的是START_NOT_STICKY or START_REDELIVER_INTENT，把交待的事干完就不运行了。 \\
+Context.bindService()从字面上理解好像不能启动服务，其实如果服务确实不存在，还是可以启动的，它就调onCreate了。绑定之后获得一个IBinder，以此来调用service的函数。
+====权限====
+默认的权限是公开的，大家都可以用。

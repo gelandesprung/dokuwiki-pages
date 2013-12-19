@@ -1,0 +1,10 @@
+在家通过域名可以很快的打开自己的网站，可以到了公司就是打不开了。我就怀疑是不是自己设置的时候把这个端口封锁了，可以看看自己的iptables --list啥都没有，找到了一个端口扫描的工具nmap
+<code bash>
+ping gelandesprung.eicp.net #以此办法知道自己机器的ip
+nmap -sT ${IP}
+  PORT     STATE    SERVICE
+  22/tcp   open     ssh
+  80/tcp   filtered http
+</code>
+这证明80端口被联通封锁了，于是网站就无法打开，而花生壳又不免费提供URL跳转了((昨天还在查这个东西有啥用，我觉得可有可无，今天就给我上了一课，这东西还必须要用))
+我只能更改服务器的端口了首选是编辑/etc/apache2/ports.conf，把80改成8888<sub>因为8080改被封锁了</sub>，这样改完还不行，再修改/etc/apache2/sites-available/default，也要把80改成8888，之后重启apache2就可以了。

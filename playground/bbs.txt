@@ -1,0 +1,9 @@
+======声明======
+本页面作为讨论组的索引页面，自己创建的东西只要索引放在这里作为目录
+
+[[playground:makefile-syntax|Makefile常用函数]]((http://www.gnu.org/software/make/manual/html_node/Functions.html#Functions)) \\
+[[yanchao:install-wordpress-to-3p|Install wordpress to palm pre plus]] \\
+[[playground:analyst-build-sh|build.sh]] \\
+[[yanchao:build-android-for-nookcolor|How to build cm for nook color]] \\
+[[playground:porting-B2g|Porting B2g ]] \\
+[[playground:arm-linux-androideabi-gcc|arm-linux-androideabi-gcc param]] \\

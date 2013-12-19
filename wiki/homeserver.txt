@@ -1,0 +1,10 @@
+====== 家庭服务器的搭建 ======
+  -配置[[https://www.sinosky.org/use-raspberry-pi-and-aria2-to-make-low-power-download-machine.html|aria2]] eg:[[http://10.1.68.108/dl|this]]
+  -安装[[http://weizhifeng.net/build-git-server-with-gitosis.html|Git服务器]]或者看[[http://www.shakthimaan.com/installs/gitosis.html| 这个]].如果想让所有人都可以下载那就要装一个[[http://www.ossxp.com/doc/git/gitolite.html|gitolite]]了
+  -寻找源上没有的[[https://launchpad.net/ubuntu/precise|软件]]
+  -CM代码上添加[[http://wiki.cyanogenmod.org/w/Doc:_integrated_kernel_building|kernel]]
+  -Git的[[http://blog.csdn.net/guoleimail/article/details/7839739|Patch功能]]
+  -[[http://gelandesprung.eicp.net:8888/blog/index.php/9-80-tcp-filtered |外网登陆无法打开网页]]
+  -网络在线的[[http://www.aypwip.org/webnote/|便签]]
+  -接个摄像头[[https://launchpad.net/ubuntu/precise/+package/motion|motion]]
+  -[[http://www.lupaworld.com/article-226904-2.html|这里]]有一个玩法推荐集合

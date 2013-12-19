@@ -1,0 +1,26 @@
+======Function Call Syntax======
+
+A function call resembles(([ri'zembl] vt. 相似, 类似)) a variable reference. It can appear anywhere a variable reference can appear, and it is expanded(([ik'spænded] adj. 扩大的)) using the same rules as variable references. A function call looks like this:
+<code Make>
+     $(function arguments)
+</code>
+or like this:
+<code make>
+     ${function arguments}
+</code>
+Here function is a function name; one of a short list of names that are part of make. You can also essentially(([i'senʃәli] ad. 本质上, 本来)) create your own functions by using the call built-in function.
+
+The arguments are the arguments of the function. They are separated from the function name by one or more spaces or tabs, and if there is more than one argument, then they are separated by commas((['kɒmә] n. 逗点, 逗号)). Such whitespace and commas are not part of an argument's value. The delimiters((【计】 定义符; 定界符)) which you use to surround the function call, whether parentheses(([pә'renθisi:s] pl. 圆括号, 插入语, 插曲)) or braces(([breis] 【计】 花括号)), can appear in an argument only in matching pairs; the other kind of delimiters may appear singly. If the arguments themselves contain other function calls or variable references, it is wisest((wise [waiz] a. 明智的, 慎虑的, 聪明的, 博学的, 狡猾的, 机灵的)) to use the same kind of delimiters for all the references; write ‘$(subst a,b,$(x))’, not ‘$(subst a,b,${x})’. This is because it is clearer, and because only one type of delimiter is matched to find the end of the reference.
+
+The text written for each argument is processed by substitution(([,sʌbsti'tju:ʃәn] n. 代替, 替换, 代替物 【计】 置换)) of variables and function calls to produce the argument value, which is the text on which the function acts. The substitution is done in the order in which the arguments appear.
+
+Commas and unmatched parentheses or braces cannot appear in the text of an argument as written; leading spaces cannot appear in the text of the first argument as written. These characters can be put into the argument value by variable substitution. First define variables comma and space whose values are isolated((a. 孤立的, 孤零零的)) comma and space characters, then substitute these variables where such characters are wanted, like this:
+<code make>
+     comma:= ,
+     empty:=
+     space:= $(empty) $(empty)
+     foo:= a b c
+     bar:= $(subst $(space),$(comma),$(foo))
+     # bar is now `a,b,c'.
+</code>
+Here the subst function replaces each space with a comma, through the value of foo, and substitutes the result. 

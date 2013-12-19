@@ -1,0 +1,193 @@
+====== How To Build CyanogenMod Android for Barnes & Noble Nook Color ("encore") ======
+Note:
+<sub>This CyanogenMod build walkthrough is auto-generated specifically for the Nook Color based on the device template at Template:device_encore. You can find similar build instructions for every officially supported device. See here for more info.</sub>
+===== Introduction =====
+These instructions will hopefully assist you to start with a stock Nook Color, unlock the bootloader (if necessary), and then download the required tools as well as the very latest source code for CyanogenMod (based on Google’s Android operating system). Using these, you can build both CyangenMod and ClockworkMod recovery image from source code, and then install them both to your device.
+
+It is difficult to say how much experience is necessary to follow these instructions. While this guide is certainly not for the very very very uninitiated, these steps shouldn’t require a PhD in software development either. Some readers will have no difficulty and breeze through the steps easily. Others may struggle over the most basic operation. Because people’s experiences, backgrounds, and intuitions differ, it may be a good idea to read through just to ascertain whether you feel comfortable or are getting over your head.
+
+Remember, you assume all risk of trying this, but you will reap the rewards! It’s pretty satisfying to boot into a fresh operating system you baked at home :) And once you’re an Android-building ninja, there will be no more need to wait for “nightly” builds from anyone. You will have at your fingertips the skills to build a full operating system from code to a running device, whenever you want. Where you go from there-- maybe you’ll add a feature, fix a bug, add a translation, or use what you’ve learned to build a new app or port to a new device-- or maybe you’ll never build again-- it’s all really up to you. 
+==== What you’ll need ====
+  *A Nook Color
+  *A relatively recent computer (Linux, OS X, or Windows) w/a reasonable amount of RAM and about 35 GB of free storage. The less RAM you have, the longer the build will take. Using SSDs results in faster builds than traditional hard drives.
+  *A micro USB cable
+  *A decent Internet connection & reliable electricity :)
+Some familiarity with basic Android operation and terminology. It would help if you’ve installed custom roms on other devices and are familiar with what a recovery image such as ClockworkMod is, for example. It may also be useful to know some basic command line concepts such as cd for “change directory”, the concept of directory hierarchies, that in Linux they are separated by /, etc. 
+
+If you are not accustomed to using Linux-- this is an excellent chance to learn. It’s free-- just download and run a virtual machine (VM) such as Virtualbox, then install a Linux distribution such as Ubuntu. Any recent 64-bit version should work great, but the latest is recommended. 
+
+=====Build CyanogenMod and ClockworkMod Recovery=====
+
+----
+
+====Prepare the Build Environment====
+  Note:
+  You only need to do these steps the first time you build. 
+  If you previously prepared your build environment and 
+  have downloaded the CyanogenMod source code for another device, 
+  skip to Prepare the device-specific code. ''
+===Install the SDK===
+If you have not previously installed adb and fastboot, install the Android SDK. "SDK" stands for Software Developer Kit, and it includes useful tools that you can use to flash software, look at the system logs in real time, grab screenshots, and more-- all from your computer. 
+  Helpful Tip
+  While the SDK contains lots of different things-- the two tools you are most 
+  interested in for building Android are adb and fastboot, 
+  located in the /platform-tools directory. 
+===Install the Build Packages===
+Several "build packages" are needed to build CyanogenMod. You can install these using the package manager of your choice. 
+  Helpful Tip
+  A package manager in Linux is a system used to install or remove software
+  (usually originating from the Internet) on your computer. With Ubuntu, 
+  you can use the Ubuntu Software Center. Even better, 
+  you may also use the apt-get install command directly in the Terminal. 
+  (Learn more about the apt packaging tool system from Wikipedia.) 
+For both 32-bit & 64-bit systems, you'll need: 
+<code bash>
+bison build-essential curl flex git-core gnupg gperf libesd0-dev libncurses5-dev 
+libsdl1.2-dev libwxgtk2.8-dev libxml2 libxml2-utils lzop openjdk-6-jdk 
+openjdk-6-jre pngcrush schedtool squashfs-tools xsltproc zip zlib1g-dev
+</code>
+In addition to the above, for 64-bit systems, get these:
+<code bash>
+g++-multilib gcc-multilib lib32ncurses5-dev lib32readline-gplv2-dev lib32z1-dev
+</code>
+Also see http://source.android.com/source/initializing.html which lists needed packages. 
+
+====Create the directories====
+You will need to set up some directories in your build environment.
+To create them:
+<code bash>
+$ mkdir -p ~/bin
+$ mkdir -p ~/android/system
+</code>
+
+==== Install the repo command ====
+Enter the following to download the "repo" binary and make it executable (runnable):
+<code bash>
+$ curl http://commondatastorage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+$ chmod a+x ~/bin/repo
+</code>
+==== Put the ~/bin directory in your path of execution ====
+Make sure that the ~/bin directory you just created is in your path of execution so that you can easily run the repo command even when you're not in ~/bin. Assuming you are using the BASH shell, the default in recent versions of Ubuntu, you can set it like this:
+<code bash>
+$ export PATH=${PATH}:~/bin
+</code>
+<note tip>
+You can make this change to the path permanent for all future Terminal sessions: \\
+$ gedit ~/.bashrc \\
+This will launch a graphical text editor. Enter \\
+export PATH=${PATH}:~/bin \\
+on its own line, then save the file. \\
+</note>
+====Initialize the CyanogenMod source repository====
+Enter the following to initialize the repository:
+<code bash>
+$ cd ~/android/system/
+$ repo init -u git://github.com/CyanogenMod/android.git -b cm-11.0
+</code>
+==== Download the source code====
+To start the download of all the source code to your computer:
+<code bash>
+$ repo sync
+</code>
+The CM manifests include a sensible default configuration for repo, which we strongly suggest you use (i.e., don't add any options to sync). For reference, our current default values are -j4, and -c. The “-j4” part means that there will be four simultaneous threads/connections. If you experience problems syncing, you can lower this to -j3 or -j2. “-c” will ask repo to pull in only the current branch, instead of the entire CM history.
+
+Prepare to wait a long time while the source code downloads. 
+''//Helpful Tip://''((The repo sync command is used to update the latest source code from CyanogenMod and Google. Remember it, as you can do it every few days to keep your code base fresh and up-to-date. ))
+==== Get prebuilt apps====
+Next,
+<code bash>
+$ cd ~/android/system/vendor/cm
+</code>
+then enter:
+<code bash>
+$ ./get-prebuilts
+</code>
+You won't see any confirmation- just another prompt. But this should cause some prebuilt apps to be loaded and installed into the source code. Once completed, this does not need to be done again.
+
+
+
+==== Prepare the device-specific code====
+After the source downloads, ensure you are in the root of the source code (cd ~/android/system), then type:
+<code bash>
+$ source build/envsetup.sh
+$ breakfast encore
+</code>
+This will download the device specific configuration and kernel source for your device. \\
+<note>You MUST be using the newest version of repo or you will encounter errors with breakfast! Run repo selfupdate to update to the latest.
+</note>
+<note tip>If you want to know more about what "$ source build/envsetup.sh" does or simply want to know more about the breakfast, brunch and lunch commands, you can head over to the Envsetup_help page</note>
+
+
+==== Extract proprietary blobs====
+Now ensure that your Nook Color is connected to your computer via the USB cable and that you are in the ~/android/system/device/bn/encore directory (you can cd ~/android/system/device/bn/encore if necessary). Then run the extract-files.sh script:
+<code bash>
+$ ./extract-files.sh
+</code>
+You should see the proprietary files (aka “blobs”) get pulled from the device and moved to the right place in the vendor directory. If you see errors about adb being unable to pull the files, adb may not be in the path of execution. If this is the case, see the adb page for suggestions for dealing with "command not found" errors. \\
+<note >Your device should already be running the branch of CyanogenMod you wish to build your own version of for the extract-files.sh script to function properly. If you are savvy enough to pull the files yourself off the device by examining the script, you may do that as well without flashing CyanogenMod first.</note>
+<note >It’s important that these proprietary files are properly extracted and moved to the vendor directory. Without them, CyanogenMod will build without error, but you’ll be missing important functionality, such as the ability to see anything!</note>
+
+
+==== Turn on caching to speed up build====
+If you want to speed up subsequent builds after this one, type:
+<code bash>
+$ export USE_CCACHE=1
+</code>
+<note important>Instead of typing cd ~/android/system every time you want to return back to the root of the source code, here’s a short command that will do it for you: croot . To use this command, as with brunch, you must first do “. build/envsetup.sh” from ~/android/system. Notice there is a period and space (“. ”) in that command.</note>
+
+
+
+==== Start the build====
+Time to start building! So now type:
+<code bash>
+$ croot
+$ brunch encore
+</code>
+The build should begin.
+
+<note important>If the build doesn't start, try lunch and choose your device from the menu. If that doesn't work, try breakfast and choose from the menu. The command make encore should then work.</note>
+
+<note important>A second, bonus tip! If you get a command not found error for croot or brunch or lunch, be sure you’ve done the “ . build/envsetup.sh” command in this Terminal session from the ~/android/system directory.</note>
+==== If the build breaks...====
+  *If you experience this not-enough-memory-related error... 
+<code bash>
+ERROR: signapk.jar failed: return code 1make: *** [out/target/product/encore/cm_encore-ota-eng.root.zip] Error 1
+</code>
+...you may want to make the following change to:
+<code bash>
+$ system/build/tools/releasetools/common.py
+</code>
+Change: java -Xmx2048m to java -Xmx1024m or java -Xmx512m
+
+Then start the build again (with brunch).
+  *If you see a message about things suddenly being “killed” for no reason, your (virtual) machine may have run out of memory or storage space. Assign it more resources and try again. 
+=====Install the build=====
+Assuming the build completed without error (it will be obvious when it finishes), type:
+<code bash>
+# cd $OUT
+</code>
+in the same terminal window that you did the build. Here you’ll find all the files that were created. The stuff that will go in /system is in a folder called system. The stuff that will become your ramdisk is in a folder called root. And your kernel is called... kernel.
+
+But that’s all just background info. The two files we are interested in are (1) recovery.img, which contains ClockworkMod recovery, and (2) cm-[something].zip, which contains CyanogenMod.
+
+
+
+==== Install CyanogenMod====
+Back to the $OUT directory on your computer-- you should see a file that looks something like:
+
+  cm-10.2-20131125-UNOFFICIAL-encore.zip
+
+''//Note://''((The above file name may vary depending on the version of CM you are building. Your build may not include a version number or may identify itself as a "KANG" rather than UNOFFICIAL version. Regardless, the file name will end in .zip and should be titled similarly to official builds.)) \\
+
+Now you can flash the cm...zip file above as usual via recovery mode. (Be sure you have backed up any previous installation before trying your new build.)
+
+==== Success! So....what's next?====
+You've done it! Welcome to the elite club of self-builders. You've built your operating system from scratch, from the ground up. You are the master/mistress of your domain... and hopefully you've learned a bit on the way and had some fun too.
+
+Now that you've succeeded in building CyanogenMod for your device, here are some suggestions on what to do next.
+
+Also, be sure to take a glance at the Dev Center on this wiki for all kinds of more detailed information about developer topics ranging from collecting logs, understanding what's in the source code directories, submitting your own contributions, porting CyanogenMod to new devices, and a lot more.
+
+Congrats again! 
+===== To get assistance=====
+#__cyanogenmod-dev__ - A helpful, real-time chat room (or “channel”) on IRC- the Internet Relay Chat. 

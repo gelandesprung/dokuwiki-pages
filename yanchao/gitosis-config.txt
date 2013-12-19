@@ -1,0 +1,115 @@
+====== Gitosis的安装和配置 ======
+=====准备=====
+在安装gitosis之前需要先安装一些它需要的东西，有以下几种：
+  *git
+  *python-setuptools
+  *ssh
+先下载gitosis
+<code bash>
+git clone git://github.com/res0nat0r/gitosis.git
+</code>
+再安装ssh
+<code bash>
+sudo apt-get install ssh
+</code>
+然后再生成密钥
+<code bash>
+ssh-gen -t rsa
+</code>
+可以在你的家目录下找到.ssh/，ssh-gen生成的密钥就在这里。
+由于我新装的系统，所以还需要安装python-setuptools，如果不装这个在安装的时候会出现
+<code>
+Traceback (most recent call last):
+ File "setup.py", line 2, in ?
+ from setuptools import setup, find_packages
+ ImportError: No module named setuptools
+</code>
+所以需要安装python-setuptools
+<code bash>
+apt-get install python-setuptools
+</code>
+现在准备工作就完成了
+=====安装=====
+安装的步骤很简单，直接执行
+<code bash>
+sudo python setup.py install
+</code>
+就可以顺利的完成了，没啥感觉。
+=====配置=====
+这一块的事情就比较多了，先创建一个用户
+<code bash>
+sudo su -l root
+useradd git
+</code>
+现在开始初始化gitosis
+<code bash>
+sudo -H -u git gitosis-init < ~/.ssh/id_rsa.pub
+</code>
+完成之后在/home/git下会出现两个目录''gitosis''和''repositories'' \\
+''gitosis''是根目录，''repositories''就是我们代码仓库的存放地点了。而且这个仓库里已经有一个项目了，它就是gitosis-admin.git，这个管理方式比较特别，用户需要先把这个项目下载下来，把自己要添加的工程配置放进去，然后push上去就生效了，有意思吧。
+现在我们就把这个项目下载下来：
+<code bash>
+git clone git@localhost:gitosis-admin.git
+</code>
+下载下来之后进入gitosis-admin代码目录。
+<code bash>
+/tmp$ ls gitosis-admin/
+gitosis.conf  keydir
+</code>
+gitosis.conf是项目的配置情况，keydir目录存放着用户的公钥。
+先看一下gitosis.conf的样子：
+<code bash>
+/tmp/gitosis-admin$ cat gitosis.conf 
+[gitosis]
+
+[group gitosis-admin]
+members = git@rk3188-ubuntu
+writable = gitosis-admin
+</code>
+解释几个关键字，group表示一个用户组，members表示用户组的成员，writable表示这个组所有成员对哪些项目拥有写权限，还可以加一个readonly选项，表示这个组成员对哪些项目拥有只读权限。
+现在来看一下如何添加一个新项目，比如我们的新项目就叫hello吧！
+<code bash>
+git clone git@localhost:gitosis-admin.git
+cd gitosis-admin
+vi gitosis.conf
+</code>
+修改完gitosis.conf之后就是这个样子:
+<code>
+[gitosis]
+
+[group gitosis-admin]
+members = git@rk3188-ubuntu yanchao@company
+writable = gitosis-admin
+
+[group develop]
+members = yanchao
+writable = hello
+</code>
+我添加了一个叫develop的开发组，这个组只有一个成员yanchao，它对hello项目拥用修改权限。到现在服务器端的修改完成了一半，接下来的一半就是把自己的key拷贝到前面说的gitosis-admin/keypair目录下，记住这个文件是从你的~/.ssh/中取得的，原名叫id_rsa.pub，拷贝过去的时候就需要改名子啦，因为的成员名叫yanchao，所以拷贝到keypair中时要改成yanchao.pub。然后修改就完成了，不过不要急还需要提交上去才生效的。
+<code bash>
+git add .
+git commit -am "add a project."
+git push
+</code>
+这样就设置好了，
+接下来我们在本地创建一个hello目录
+<code bash>
+mkdir hello
+cd hello
+git init
+git remote add origin git@localhost:hello.git
+git push origin master
+</code>
+这样一个新项目就添加好了，你可以执行一下，
+<code bash>
+git clone git@localhost:hello.git
+</code>
+空项目就下载下来了。怎么添加代码，怎么提交就不用说了，
+现在说说如果另外有一个人A也想加入到这个hello项目中，怎么办。
+<code>
+首先让A发送给你一个公钥，如果他还没有生成，执行ssh-gen生成一个 \\
+然后把这个id_rsa.pub改名成A.pub \\
+再把gitosis-admin下载下来 \\
+然后把A.pub拷贝到keypair中，在你的hello条目下member一行添加上A的名子“A”
+git add并提交就完成了。
+</code>

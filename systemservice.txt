@@ -1,0 +1,340 @@
+====== Android的系统服务 ======
+===== Installer =====
+installer((frameworks/base/services/java/com/android/server/pm/Installer.java))服务非常的关键，不但要启动这个服务，还要等这个服务完全启动才能进行下面服务的启动。
+Installer服务分成两部分，一部分是由C代码完成((frameworks/base/cmds/installd/))，它们之间通过[[yanchao:android-socket|socket]]通讯。
+再看installd的功能：
+<code c>
+struct cmdinfo cmds[] = {
+    { "ping",                 0, do_ping },
+    { "install",              4, do_install },
+    { "dexopt",               3, do_dexopt },
+    { "movedex",              2, do_move_dex },
+    { "rmdex",                1, do_rm_dex },
+    { "remove",               2, do_remove },
+    { "rename",               2, do_rename },
+    { "fixuid",               3, do_fixuid },
+    { "freecache",            1, do_free_cache },
+    { "rmcache",              2, do_rm_cache },
+    { "getsize",              5, do_get_size },
+    { "rmuserdata",           2, do_rm_user_data },
+    { "movefiles",            0, do_movefiles },
+    { "linklib",              3, do_linklib },
+    { "mkuserdata",           4, do_mk_user_data },
+    { "rmuser",               1, do_rm_user },
+    { "cloneuserdata",        3, do_clone_user_data },
+};
+</code>
+我们来看一下installd的ping函数：
+<code c>
+static int do_ping(char **arg, char reply[REPLY_MAX])
+{
+    return 0;
+}
+</code>
+这么做是为了保证installd正常启动java实现的客户端可以与之正常通讯。应用程序的权限，目录的创建都和它有很大的关系，installd如果没有正常的启动，其它的都没有意义。
+==== Installd.java的实现过程 ====
+我先列出五个函数：
+  *connect
+  *writeCommand
+  *transaction
+  *execute
+  *ping
+class Installer没有显示的构造函数，SystemServer启动它的时候直接先调用一下它的ping函数，主要目的就是测试class Installd与installd服务的连接是否可用。其它功能如install rename等的执行过程与ping是一样的。<sub>短一点的代码直接列出，长的代码去除与讨论问题无关的部分</sub>
+先看ping的代码：
+<code java>
+public boolean ping() {
+        if (execute("ping") < 0) {     
+            return false;
+        } else {
+            return true;
+        }
+    }  
+</code>
+ping函数调用execute函数，传入一个String类型的参数，这个参数就是installd服务要执行的命令名。
+<code java>
+private int execute(String cmd) {
+        String res = transaction(cmd);
+        try {
+            return Integer.parseInt(res);
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
+    }
+</code>
+execute函数调用transaction，传入自己接收到的String，并把transaction返回的字符转化成数字返回给调用它的函数。 \\
+我们再看transaction:
+<code java>
+    private synchronized String transaction(String cmd) {
+        if (!connect()) {
+            Slog.e(TAG, "connection failed");
+            return "-1";
+        }
+
+        if (!writeCommand(cmd)) {
+            /*
+             * If installd died and restarted in the background (unlikely but
+             * possible) we'll fail on the next write (this one). Try to
+             * reconnect and write the command one more time before giving up.
+             */
+            Slog.e(TAG, "write command failed? reconnect!");
+            if (!connect() || !writeCommand(cmd)) {
+                return "-1";
+            }
+        }
+        if (readReply()) {
+            String s = new String(buf, 0, buflen);
+            return s;
+        } else {
+            return "-1";
+        }
+    }
+</code>
+调用connect检查是否连接到了installd这个socket，如果没有连接上，就连接上去，再调用writeCommand把命令写到socket上，调用readReply等待执行的返回结果。其它的命令也是这个执行流程，简单的概括一下Installd这个类的功能就是把需要执行的命令写到/dev/scoket/installd这个socket中，并从中读取执行结果返回给调用者。
+==== installd 服务的流程 ====
+一开始我就有个疑问，installd怎么会和目录的创建还有权限有关系呢，不过看了installd.c的main函数就明白了 \\
+main函数先执行的三个函数：
+  *initialize_globals
+  *initialize_directories
+  *drop_privileges
+之后才android_get_control_socket并listen，然后accept。accept返回的时候执行execute，这时候才和Installer相符。
+对于initialize_globals我们不看它的代码，看它的注释：
+  *Get the android data directory
+  * Get the android datadata directory.
+  * Get the android app directory.
+  * Get the android protected app directory.
+  * Get the android app native library directory.
+  * Get the sd-card ASEC mount point.
+  * Get the android media directory.
+执行的结果就是配置这些变量的值：
+<code>
+extern dir_rec_t android_app_dir;
+extern dir_rec_t android_app_private_dir;
+extern dir_rec_t android_app_lib_dir;
+extern dir_rec_t android_data_dir;
+extern dir_rec_t android_datadata_dir;
+extern dir_rec_t android_asec_dir;
+extern dir_rec_t android_media_dir;
+extern dir_rec_array_t android_system_dirs;
+</code>
+这些是全局的变量，与应用程序相关的目录。
+
+initialize_directories函数就和权限关联很大啦：
+<code c>
+    if (access(user_data_dir, R_OK) < 0) {
+        if (mkdir(user_data_dir, 0711) < 0) {
+            goto fail;
+        }
+        if (chown(user_data_dir, AID_SYSTEM, AID_SYSTEM) < 0) {
+            goto fail;
+        }
+        if (chmod(user_data_dir, 0711) < 0) {
+            goto fail;
+        }
+    }
+</code>
+先检查/data/user是否可读，否则创建一个权限为0711的/data/user目录，然后chwon为AID_SYSTEM，再把它改成0711的权限。
+另外还要把/data/user/0指向/data/data/
+最后一个函数drop_privileges，它的功能就是设定当前进程的UID GID还有其它权限，代码片段：
+<code c>
+    if (prctl(PR_SET_KEEPCAPS, 1) < 0) {
+        ALOGE("prctl(PR_SET_KEEPCAPS) failed: %s\n", strerror(errno));
+        exit(1);
+    }
+
+    if (setgid(AID_INSTALL) < 0) {
+        ALOGE("setgid() can't drop privileges; exiting.\n");
+        exit(1);
+    }
+
+    if (setuid(AID_INSTALL) < 0) {
+        ALOGE("setuid() can't drop privileges; exiting.\n");
+        exit(1);
+    }
+</code>
+然后构造两个结构体__user_cap_header_struct和__user_cap_data_struct，调用[[man-capset|capset]]设置它的属性。
+===== AccountManagerService =====
+AccountManagerService((frameworks/base/core/java/android/accounts/AccountManagerService.java))提供账户，密码，授权的管理。用户不可以直接使用，必须通过AccountManager间接的使用。
+====AccountManager服务的用法====
+AccountManagerService服务注册在systemserver中，应用程序不可以直接获取使用，必须透过AccountManager来使用AccountManagerService提供的服务，AccountManagerService和AccountManager通过AIDL通讯，所以AccountManagerService实现了IAccountManager接口。看一下比较常出现的两种用法：
+<code java>
+//这是添加账户的用法
+AccountManager.get(context).addAccount(accountType, null, null, options, null, callback,
+                null);
+</code>
+<code java>
+//这是获取帐户的用法
+Account[] accounts = AccountManager.get(mContext).getAccounts();
+</code>
+简单吧，只要在在应用程序中包含头文件
+<code java>
+import android.accounts.Account;
+import android.accounts.AccountManager;
+</code>
+还要在AndroidManifest.xml中添加一个权限
+<code xml>
+<uses-permission android:name="android.permission.GET_ACCOUNTS" />
+</code>
+除了这两个之外，还有许多接口可以使用，都定义在IAccountManager.java中，我们来看一下。
+====AccountManagerService提供的方法====
+AccountManagerService对外提供的方法就是在IAccountManager中定义的接口
+<code java frameworks/base/core/java/android/accounts/IAccountManager.aidl>
+interface IAccountManager {
+    String getPassword(in Account account);
+    String getUserData(in Account account, String key);
+    AuthenticatorDescription[] getAuthenticatorTypes();
+    Account[] getAccounts(String accountType);
+    Account[] getAccountsAsUser(String accountType, int userId);
+    void hasFeatures(in IAccountManagerResponse response, in Account account, in String[] features);
+    void getAccountsByFeatures(in IAccountManagerResponse response, String accountType, in String[] features);
+    boolean addAccount(in Account account, String password, in Bundle extras);
+    void removeAccount(in IAccountManagerResponse response, in Account account);
+    void invalidateAuthToken(String accountType, String authToken);
+    String peekAuthToken(in Account account, String authTokenType);
+    void setAuthToken(in Account account, String authTokenType, String authToken);
+    void setPassword(in Account account, String password);
+    void clearPassword(in Account account);
+    void setUserData(in Account account, String key, String value);
+    void updateAppPermission(in Account account, String authTokenType, int uid, boolean value);
+
+    void getAuthToken(in IAccountManagerResponse response, in Account account,
+        String authTokenType, boolean notifyOnAuthFailure, boolean expectActivityLaunch,
+        in Bundle options);
+    void addAcount(in IAccountManagerResponse response, String accountType,
+        String authTokenType, in String[] requiredFeatures, boolean expectActivityLaunch,
+        in Bundle options);
+    void updateCredentials(in IAccountManagerResponse response, in Account account,
+        String authTokenType, boolean expectActivityLaunch, in Bundle options);
+    void editProperties(in IAccountManagerResponse response, String accountType,
+        boolean expectActivityLaunch);
+    void confirmCredentialsAsUser(in IAccountManagerResponse response, in Account account,
+        in Bundle options, boolean expectActivityLaunch, int userId);
+    void getAuthTokenLabel(in IAccountManagerResponse response, String accountType,
+        String authTokenType);
+}
+</code>
+下面我们再来看看AccountManagerService是如何管理帐户的。
+====AccountManagerService的实现====
+我们以addAccount()的实现过程来分析一下。
+<code java>
+public boolean addAccount(Account account, String password, Bundle extras) {
+    if (account == null) throw new IllegalArgumentException("account is null");
+    checkAuthenticateAccountsPermission(account);
+    UserAccounts accounts = getUserAccountsForCaller();
+    // fails if the account already exists
+    long identityToken = clearCallingIdentity();
+    try {
+        return addAccountInternal(accounts, account, password, extras);
+    } finally {
+         restoreCallingIdentity(identityToken);
+    }
+}
+</code>
+要实现添加账户的功能就可申请编辑的权限
+<code xml><uses-permission android:name="android.permission.MANAGE_ACCOUNTS"/></code>
+UserAccount是一个与数据库操作相关的类，区分它的key应该就是userId。
+<code java>private final SparseArray<UserAccounts> mUsers = new SparseArray<UserAccounts>()</code>
+''getUserAccountsForCaller''函数的实现有必要深究一下，因为它直接调用getUserAccounts，所以深究的对象变成了getUserAccounts。
+<code java>
+protected UserAccounts getUserAccounts(int userId) {
+    synchronized (mUsers) {
+         UserAccounts accounts = mUsers.get(userId);
+         if (accounts == null) {
+             accounts = initUser(userId);
+             mUsers.append(userId, accounts);
+         }
+         return accounts;
+     }
+}
+</code>
+如果在mUsers中找不到userId就需要创建一个UserAccounts并添加到mUsers中，从这里我们也可以看出mUsers的成员就是这样子一个一个添加进来的。到这里我们就已经知道了它的工作流程了，但是没有什么感觉，有没有。要知道它的如何管理这些数据的，就需要看initUser函数了。
+<code java>    private UserAccounts initUser(int userId) {
+        synchronized (mUsers) {
+            UserAccounts accounts = mUsers.get(userId);
+            if (accounts == null) {
+                accounts = new UserAccounts(mContext, userId);
+                mUsers.append(userId, accounts);
+                purgeOldGrants(accounts);
+                validateAccountsInternal(accounts, true /* invalidateAuthenticatorCache */);
+            }
+            return accounts;
+        }
+    }
+</code>
+第一句发生的情况是我们在调initUser的同时别的程序已经执行完了inituser而且使用的参数和我们一样。重要的还是下面的，创建一个UserAccounts对象，添加到mUsers中去。purgeOldGrants很坑爹，我看了好久还是没有明白，我想还是要弄添加这个userId从哪里来，是什么东西，这也好办userId的值就是在getUserAccountsForCaller调用getUserAccountsForCaller的时候从UserHandle.getCallingUserId()得来的，看我把它挖出来了
+<code java>
+public static final int getCallingUserId() { 
+        return getUserId(Binder.getCallingUid());
+    }
+</code>
+事实证明userId的值就是当前应用所uid
+===== ContentService =====
+==== LightsService ====
+==== PowerManagerService ====
+==== DisplayManagerService ====
+==== DeviceHandlerService ====
+==== BatteryService ====
+==== VibratorService ====
+==== AlarmManagerService ====
+==== MountService ====
+==== NetworkManagementService ====
+==== NetworkStatsService ====
+==== NetworkPolicyManagerService ====
+==== ConnectivityService ====
+==== WifiP2pService ====
+==== WifiService ====
+==== NsdService ====
+==== IPackageManager ====
+==== Context ====
+==== WindowManagerService ====
+==== BluetoothManagerService ====
+==== DockObserver ====
+==== RotationSwitchObserver ====
+==== UsbService ====
+==== SerialService ====
+==== TwilightService ====
+==== UiModeManagerService ====
+==== RecognitionManagerService ====
+==== ThrottleService ====
+==== NetworkTimeUpdateService ====
+==== CommonTimeManagementService ====
+==== InputManagerService ====
+==== TelephonyRegistry ====
+====DevicePolicyManagerService====
+====StatusBarManagerService====
+====InputMethodManagerService====
+====AppWidgetService appWidget====
+====ProfileManagerService====
+====NotificationManagerService====
+====WallpaperManagerService====
+====LocationManagerService====
+====CountryDetectorService====
+====TextServicesManagerService====
+====LockSettingsService====
+====DreamManagerService====
+====PieService====
+====Context====
+====MountService====
+====BatteryService====
+====NetworkManagementService====
+====NetworkStatsService====
+====NetworkPolicyManagerService====
+====ConnectivityService====
+====DockObserver====
+====RotationSwitchObserver====
+====UsbService====
+====ThrottleService====
+====TwilightService====
+====UiModeManagerService====
+====AppWidgetService====
+====WallpaperManagerService====
+====InputMethodManagerService====
+====RecognitionManagerService====
+====LocationManagerService====
+====CountryDetectorService====
+====NetworkTimeUpdateService====
+====CommonTimeManagementService====
+====TextServicesManagerService====
+====StatusBarManagerService====
+====DreamManagerService====
+====InputManagerService====
+====TelephonyRegistry====

@@ -1,0 +1,119 @@
+====== 系统介绍 ======
+===== Unix系统的结构特点 =====
+Unix的核心是kernel，包围在kernel外层的是System Call((系统调用))，System Call层之外的一层就是shell，shell层之外是application.
+=====登陆=====
+主要是看一下/etc/passwd这个文件的格式：
+<code bash>
+irc:x:39:39:ircd:/var/run/ircd:/bin/sh
+</code>
+这是我从/etc/passwd文件中摘出来的一行内容，它以'':''分割成七部分。
+  -用户名
+  -用户密码
+  -用户ID
+  -组ID
+  -说明
+  -家目录
+  -shell类型
+结合上面的一条语句，用户名是irc，用户密码加密保存到其它文件，以x占位，user id是39,group id也是39，注释的内容是/var/run/ircd，这里写什么都行，只要是一串字符。用户登陆使用的shell是/bin/sh，因为shell的类型有好多种。
+===== shell的类型=====
+在unix的发展时期出现了好多种shell，各有特点，并且不断进化，吸收其它类型shell的优点。下面列举几种流行的shell:
+  * Bourne shell((/bin/sh))
+  * Bounrne-again shell((/bin/bash))
+  * C shell((/bin/csh))
+  * Korn shell((/bin/ksh))
+  * TENEX C shell((/bin/tcsh))
+Bourne shell比较通用，基本都支持，Bounrne-again shell是在Bounrne shell的基本上吸收了C shell和Korn shell的优点发展而来，属于POSIX标准的shell，在linux中使用比较多。C shell主要出现在System V中，Korn shell主要是在SVR4中使用。TENEX C shell是加强版的C shell，常用于Mac OS和FreeBSD。像suse提供所有版本的shell。
+===== File System =====
+有一个根目录叫/，也只有它一个目录可以以/命名，文件系统中只有目录和文件两种形式，目录是一种特殊的文件，它们都通过结构体来描述，并把结构体信息保存起来，所有文件的信息都可以通过stat和fstat函数获取，它取到的就是文件的描述结构体。
+====文件名====
+只有两个字符不可以成为文件名的字符，一个是/另一个是空，/是用来分割文件路径的，空是来结构文件路径的。目录只要被创建它都包含两个文件一个是dot另一个是dot-dot，dot指向本目录，dot-dot指向上一级目录。以前的unix文件名最多由14个字符组成，后来发展到最多可有255个字符组成，现在的系统255是起点。
+====working directory====
+每一个进程都有一个working directory，这关系到它使用相对路径的时候，相对的哪个路径。所以这个路径也叫current working dirctory。而且这个路径还可以通过chdir函数修改。
+====home directory====
+当我们登陆系统的时候/etc/passwd中的第六项就是home directory，working directory被初始化成home directory。
+=====输入输出=====
+====文件描述符====
+文件描述符的取值范围是非负整数，作用就是内核用来标示进程对某一文件的访问。所以只要进程打开或者创建一个文件，都会返回一个描述符，进程以些描述符来做读写操作。
+====标准输入，输出，错误输出====
+一个新任务在shell中执行的时候都会打开三个描述符0,1,2，分别代表输入，输出和错误。默认的情况下这三个描述符都绑定在shell中，你也可以重定向到文件中，如:
+<code bash>
+ls >out.file
+</code>
+==== Unbuffered I/O ====
+与描述符协同工作的函数如open close read write lseek都是unbuffed，意思就是说它们没有缓存数据的习惯
+<code c v1.4.c>
+#include <unistd.h>
+#define BUFFSIZE 4096
+int
+main (void)
+{
+  int n;
+  char buffer[BUFFSIZE];
+  while ((n = read (STDIN_FILENO, buffer, BUFFSIZE)) > 0)
+    if (write (STDOUT_FILENO, buffer, n) != n)
+      {
+        printf ("write error.\n");
+      }
+  if (n < 0)
+    {
+      printf ("read error.\n");
+    }
+}
+
+</code>
+然后执行如下命令
+<code bash>
+cc v1.4.c
+./a.out >data.out
+</code>
+随便在终端在输入一个字符，敲回车，cat data.out，看到输入的字符了吧。
+<note tip>STDIN_FILENO和STDOUT_FILENO以及STDERR_FILENO都定义在unistd.h头文件中，记得要包含进来。</note>
+==== standard I/O ====
+standard I/O为我们的I／O操作添加了缓冲功能，我们在使用的过程中不用关心缓冲区到底该设置多大了，比如用fgets可以读取一行，而用read则不行，它只接受读多少个字节，是不是一行它是不会关心的。最常用的标准输入输出是printf，使用它要包含头文件stdio.h所有standard I/O的函数原型都在stdio.h中定义，standard I/O中使用stdin stdout stderr表示三个描述符也定义在stdio.h中
+他们给了一个例子:
+<code c v1.5.c>
+#include <stdio.h>
+int
+main (void)
+{
+  char c;
+  while ((c = getc (stdin)) != EOF)
+    if (putc (c, stdout) == EOF)
+      printf ("output error\n");
+  if (ferror (stdin))
+    printf ("input error\n");
+  return 0;
+}
+</code>
+<note tip>我觉得对于说明standard I/O的特点没啥意义，看看用法就行了。</note>
+=====程序和进程=====
+====程序====
+程序就是一个可执行文件
+====进程====
+进程就是程序的执行过程，程序就像一颗种子，进程就是种子生长的过程。unix给每一个进程分配一个独一无二的非负整数作为标识，我们把这个标识称为process id。我们写个小程序来看一下：
+<code c v1.6.c>
+#include <unistd.h>
+#include <stdio.h>
+int
+main (void)
+{
+  printf ("current process's pid=%d\n", getpid ());
+  return 0;
+}
+</code>
+====进程控制====
+====程序====
+程序就是一个可执行文件
+====进程====
+进程就是程序的执行过程，程序就像一颗种子，进程就是种子生长的过程。unix给每一个进程分配一个独一无二的非负整数作为标识，我们把这个标识称为process id。我们写个小程序来看一下：
+<code c v1.6.c>
+#include <unistd.h>
+#include <stdio.h>
+int
+main (void)
+{
+  printf ("current process's pid=%d\n", getpid ());
+  return 0;
+}
+</code>
+====进程控制====

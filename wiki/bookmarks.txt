@@ -1,0 +1,5 @@
+  -[[http://blog.csdn.net/ithomer/article/details/7364024|Android Service]]服务
+  -[[http://blog.sina.com.cn/s/blog_4a422d9b01009j9y.html|dokuwiki plugins]]
+  -我看上的手机
+    *联想的这个[[http://item.jd.com/1009334.html|S898T]] 没有找到好的刷机包，我想刷原生的系统。
+    *康佳的[[http://item.jd.com/894959.html|S898T]]
